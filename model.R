@@ -11,7 +11,7 @@ library(rpart.plot)
 cl <- makeCluster(8)
 registerDoParallel(cl)
 #stopCluster(cl)
-#test
+
 #Read and explore data
 setwd("~/GitHub/coursera-practical-machine-learning")
 pml.train <- read_csv("pml-training.csv", trim_ws = TRUE)[,-1]
