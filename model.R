@@ -42,10 +42,10 @@ plot(train.rpart)
 date()
 
 #Random forest
-date()
+date() #Timestamp to view how long the model took to run
 train.rf <- train(classe ~ ., data=train.m, method="rf", metric=metric, trControl=control, tuneLength=5)
-print(train.rf)
-plot(train.rf)
+print(train.rf) #Print model results
+plot(train.rf) #Plot accuracy under different tuning parameters
 date()
 
 #Gradient boosted trees
@@ -68,11 +68,6 @@ train.svm <- train(classe ~ ., data=train.m, method="svmLinear", metric=metric, 
 print(train.svm)
 plot(train.svm)
 date()
-
-#Test RF only on held-out test set - this can go later
-pml.test <- read_csv("pml-testing.csv", trim_ws = TRUE)[,-1]
-train.rpart.predict <- predict(train.rpart, newdata = pml.test)
-confusionMatrix(train.rpart.predict, pml.test$classe)
 
 #Compare models within test CV - make a function of this
 results <- resamples(list(CART=train.rpart, RF=train.rf, GBM=train.gbm, SM=train.mn, SVM=train.svm)) 
@@ -110,3 +105,18 @@ confusionMatrix(train.rf.predict, pml.test$classe)
 confusionMatrix(train.gbm.predict, pml.test$classe)
 confusionMatrix(train.nm.predict, pml.test$classe)
 
+#Test RF only on held-out test set - this can go later
+pml.test <- read_csv("pml-testing.csv", trim_ws = TRUE)[,-1]
+predict(train.rf, pml.test)
+predict(train.gbm, pml.test)
+
+#Save objects for assignment write-up
+saveRDS(bwplot(results, scales=scales), "model.comparison.plot.rds")
+
+saveRDS(confusionMatrix(train.rf.predict, test.m$classe), "RFAcc.rds")
+saveRDS(kable(confusionMatrix(train.rf.predict, test.m$classe)$table), "RFConf.rds")
+
+saveRDS(confusionMatrix(train.gbm.predict, test.m$classe), "GBMAcc.rds")
+saveRDS(kable(confusionMatrix(train.gbm.predict, test.m$classe)$table), "GBMConf.rds")
+
+saveRDS(predict(train.rf, pml.test), "quiz.rds")
