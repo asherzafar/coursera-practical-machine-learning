@@ -6,9 +6,10 @@ library(ggplot2)
 library(tidyverse)
 library(lubridate)
 library(rpart.plot)
+library(lime)
 
 #Set up parallel processing
-cl <- makeCluster(8)
+cl <- makeCluster(detectCores()-4)
 registerDoParallel(cl)
 #stopCluster(cl)
 
@@ -33,6 +34,31 @@ split.m <- createDataPartition(pml.train$classe, p = 0.7, list=FALSE)
 train.m <- pml.train[split.m,]
 test.m <- pml.train[-split.m,]
 
+#PCA
+prin_comp <- prcomp(train.m[,-53], scale. = T)
+biplot(prin_comp, scale = 0)
+
+library(ggbiplot)
+g <- ggbiplot(prin_comp, obs.scale = 1, var.scale = 1, 
+              ellipse = TRUE, 
+              circle = TRUE)
+
+saveRDS(g,"biplot.rds")
+
+std_dev <- prin_comp$sdev
+pr_var <- std_dev^2
+pr_var[1:10]
+prop_varex <- pr_var/sum(pr_var)
+prop_varex[1:20]
+prop_varex <- as.data.frame(prop_varex)
+
+scree <- ggplot(data = prop_varex, aes(x=1:52, y=cumsum(prop_varex))) +
+  geom_point() + geom_line() + 
+  xlab("Principal Component") +
+  ylab("Cumulative Proportion of Variance Explained")
+
+saveRDS(scree,"scree.rds")
+
 #Run models
 #Decision tree
 date()
@@ -47,6 +73,14 @@ train.rf <- train(classe ~ ., data=train.m, method="rf", metric=metric, trContro
 print(train.rf) #Print model results
 plot(train.rf) #Plot accuracy under different tuning parameters
 date()
+saveRDS(train.rf, "rfmodel.rds")
+
+#Test LIME to interpret the RF model
+lime.data <- test.m[sample(nrow(test.m), 3), ]
+rf.lime <- lime(train.m, train.rf, bin_continuous = TRUE, n_bins = 5, n_permutations = 1000)
+rf.lime.explain <- explain(lime.data, rf.lime, n_labels=3,n_features=5)
+rf.lime.plot <- plot_features(rf.lime.explain, ncol = 3)
+saveRDS(rf.lime.plot, "rflimeplot.rds")
 
 #Gradient boosted trees
 date()
@@ -54,6 +88,7 @@ train.gbm <- train(classe ~ ., data=train.m, method="gbm", metric=metric, trCont
 print(train.gbm)
 plot(train.gbm)
 date()
+saveRDS(train.gbm, "gbtmodel.rds")
 
 #Softmax
 date()
@@ -69,21 +104,55 @@ print(train.svm)
 plot(train.svm)
 date()
 
-#Compare models within test CV - make a function of this
-results <- resamples(list(CART=train.rpart, RF=train.rf, GBM=train.gbm, SM=train.mn, SVM=train.svm)) 
-summary(results)
-scales <- list(x=list(relation="free"), y=list(relation="free"))
-bwplot(results, scales=scales)
+#Gaussian Process model - trying this model out of curiousity for a future project
+gp.data <- train.m[sample(nrow(train.m), 2000), ]
 
-#Most important variables in the RF - make a function of this
-MIV.l <- varImp(train.rf)
-MIV.l$Variables <- row.names(MIV.l)
-MIV.l <- MIV.l[order(-MIV.l$Overall),]
-print(head(MIV.l))
-MIV.l <- varImp(train.rf)
-MIV.l$Variables <- row.names(MIV.l)
-MIV.l <- MIV.l[order(-MIV.l$Overall),]
-print(head(MIV.l))
+date()
+train.gpr <- train(classe ~ ., data=train.m, method="gaussprRadial", metric=metric, trControl=control, tuneLength=5, verbose = FALSE)
+print(train.gpr)
+plot(train.gpr)
+date()
+saveRDS(train.gpr, "gprmodel.rds")
+
+#MLP - adding a simple neural network with LIME for model interpretability to test both libraries
+train.m$classe <- as.factor(train.m$classe)
+
+mlp_grid = expand.grid(layer1 = c(50),
+                       layer2 = c(50),
+                       layer3 = c(50))
+
+date()
+train.mlp <- train(classe ~ ., data=train.m, method="mlpML", 
+                   preProc =  c('center', 'scale', 'knnImpute', 'pca'),
+                   metric=metric, trControl=control,
+                   tuneGrid = mlp_grid,
+                   verbose = FALSE)
+print(train.mlp)
+plot(train.mlp)
+date()
+saveRDS(train.mlp, "mlpmodel.rds")
+
+#Test LIME to interpret the MLP model
+mlp.lime <- lime(train.m, train.mlp, bin_continuous = TRUE, n_bins = 5, n_permutations = 1000)
+mlp.lime.explain <- explain(lime.data, mlp.lime, n_labels=3,n_features=5)
+mlp.lime.plot <- plot_features(mlp.lime.explain, ncol = 3)
+saveRDS(mlp.lime.plot, "mlplimeplot.rds")
+
+#Compare models within test CV
+summary(results)
+
+caret.perf.plot <- function(caret.models){ #Takes a list of caret models and compares their metrics in a plot
+  #Add code to check if all list objects are caret models
+  results <- resamples(test) 
+  scales <- list(x=list(relation="free"), y=list(relation="free"))
+  return(bwplot(results, scales=scales))
+}
+
+model.comparison <- list(CART=train.rpart, RF=train.rf, GBM=train.gbm, SM=train.mn, SVM=train.svm)
+caret.perf.plot(model.comparison)
+
+#Most important variables in the RF
+varImp(train.rf)
 
 #Confusion matrix for initial test data
 train.rpart.predict <- predict(train.rpart, newdata = test.m)
@@ -105,7 +174,7 @@ confusionMatrix(train.rf.predict, pml.test$classe)
 confusionMatrix(train.gbm.predict, pml.test$classe)
 confusionMatrix(train.nm.predict, pml.test$classe)
 
-#Test RF only on held-out test set - this can go later
+#Test RF and GBM on held-out test set
 pml.test <- read_csv("pml-testing.csv", trim_ws = TRUE)[,-1]
 predict(train.rf, pml.test)
 predict(train.gbm, pml.test)
