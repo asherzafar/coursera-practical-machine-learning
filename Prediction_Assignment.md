@@ -8,11 +8,11 @@ output:
     keep_md: true
 ---
 
-##Classifying Movements based on Accelerometer Data
+## Classifying Movements based on Accelerometer Data 
 
 The objective of this project was to develop a model that can accurately predict out-of-sample whether a movement belonds to one of five classes. My approach included tidying the data, setting up training controls and hyperparameter searches, and cross-validating the results to estimate the out-of-sample accuracy, as well as holding out a test set. Data for this project came from the [Human Activity Recognition project from Groupware@LES](http://groupware.les.inf.puc-rio.br/har). 
 
-####Update - Jan 3, 2018
+#### Update - Jan 3, 2018
 I came back to this project to try out a few things beyond the tree ensembles that were used, namely:
 
 * The [LIME](https://github.com/thomasp85/lime) package for model interpretability
@@ -22,10 +22,10 @@ I came back to this project to try out a few things beyond the tree ensembles th
 
 These results are available in the Appendix. Full code is available in the model.R file in this repo.
 
-###Exploring the data
+### Exploring the data
 While there are 159 variables in the data set, only 53 had useful data in them (most were almost entirely blank and near zero variance). Metadata on specific users was dropped, as this might not be available for any future movements that are predicted. The remaining data was used to train 4 models. 70% of the data was used for training, and 3 fold cross-validation was used on this set (more folds or repeated CV would have been of little value for the computational time involved). Example code from the random forest (RF) model is presented below. Only selected code is in this markdown file. Full code for this assignment is available within this repo in the [model.R](https://github.com/asherzafar/coursera-practical-machine-learning/blob/master/model.R) file.
 
-###Random Forest Model Code
+### Random Forest Model Code
 
 ```r
 control <- trainControl(method="cv", number=3, summaryFunction = multiClassSummary, classProbs = TRUE) #Set controls
@@ -36,7 +36,7 @@ plot(train.rf) #Plot accuracy under different hypertuning parameters
 date()
 ```
 
-###Model Comparison
+### Model Comparison
 
 The most accurate cross-validated random forest model with the hyperparameter mtry=14 (the number of sampled variables per split) was over 99% accurate. The only comparable model in performance were gradient boosted trees (GBT), though I also tested a single decision tree and linear SVM. Cross-validation folds had little variance in accuracy or AUC. Softmax regression was considered but not used given the performance of the tree ensembles.
 
@@ -44,7 +44,7 @@ The most accurate cross-validated random forest model with the hyperparameter mt
 
 Applying the results to the held-out test data validate the expectations from the cross-validation. Both the RF and GBM were over 99% accurate. Confusion matrices indicated little pattern in errors, though some misclassifications were slightly higher than others.
 
-###Random Forest Results
+### Random Forest Results
 
 
 ```
@@ -81,7 +81,7 @@ Applying the results to the held-out test data validate the expectations from th
 ## Balanced Accuracy      0.9994   0.9965   0.9947   0.9926   0.9994
 ```
 
-###Gradient Boosted Tree Results
+### Gradient Boosted Tree Results
 
 
 ```
@@ -126,19 +126,19 @@ Based on these results, I predict the 20 entries held out for the "quiz" compone
 ## Levels: A B C D E
 ```
 
-###Conclusions
+### Conclusions
 
 Either the random forest or gradient boosted tree models on theiur own would be more than suitable for this problem, with both achieving over 99% accuracy. Hyperparameters can be refined further and tested for compute time under parallel processing to determine the best model for an operational or real-time prediction setting.
 
-##Appendix - Jan 3, 2018
-###LIME
+## Appendix - Jan 3, 2018
+### LIME
 Out of curiousity, I wanted to try out the increasingly popular [LIME](https://github.com/thomasp85/lime) package. LIME stands for "Local Interpretable Model-agnostic Explanations", and, in a nutshell, will evaluate specific predictions of an observation in your model, and indicate which features most strongly supported or contradicted that prediction locally. It has hefty compute time, so I just tried it on three points from the random forest model for now. I anticipate this being useful for most of my projects.
 
 <img src="Prediction_Assignment_files/figure-html/unnamed-chunk-6-1.png" width="90%" />
 
 Forgive the... "lack of polish" in the stock graph above. Interpreting this is still a little challenging, but we can see some feature weights that were important to specific predictions, such as forearm or belt movement.
 
-###Multilayer Perceptron Neural Net and LIME
+### Multilayer Perceptron Neural Net and LIME
 For fun, I tried this on a multilayer perceptron (MLP) to 1) see if a neural net could achieve similar accuracy, and 2) see if LIME interprets results differently. I attempted a Gaussian Process model as well, but given that it's O(n^3) complexity, it didn't do so great on my desktop past 2,000 observations.
 
 
@@ -175,7 +175,7 @@ This particular configuration achieved 94.6% accuracy on scaled, nn-imputed, and
 
 <img src="Prediction_Assignment_files/figure-html/unnamed-chunk-8-1.png" width="90%" />
 
-###Principal Component Analysis
+### Principal Component Analysis
 I wish I took a look at the PCA biplot when I first did this, because the five classes of movement in the training data are actually quite clear from the first 2 PCAs alone (though they don't explain a ton of the variance), and surely a decently configured k-means clustering would do a decent job here. I might also have considered t-SNE to capture non-linearity for comparison.
 
 <img src="Prediction_Assignment_files/figure-html/unnamed-chunk-9-1.png" width="90%" />
