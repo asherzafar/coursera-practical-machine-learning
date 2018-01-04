@@ -10,7 +10,7 @@ output:
 
 ## Classifying Movements based on Accelerometer Data 
 
-The objective of this project was to develop a model that can accurately predict out-of-sample whether a movement belonds to one of five classes. My approach included tidying the data, setting up training controls and hyperparameter searches, and cross-validating the results to estimate the out-of-sample accuracy, as well as holding out a test set. Data for this project came from the [Human Activity Recognition project from Groupware@LES](http://groupware.les.inf.puc-rio.br/har). 
+The objective of this project was to develop a model that can accurately predict out-of-sample whether a movement belonds to one of five classes. My approach included tidying the data, setting up training controls and hyperparameter searches, and cross-validating the results to estimate the out-of-sample accuracy, as well as holding out a test set. Data for this project came from the [Human Activity Recognition project from Groupware@LES](http://groupware.les.inf.puc-rio.br/har). The repository for all the project files is available on [GitHub](https://github.com/asherzafar/coursera-practical-machine-learning).
 
 #### Update - Jan 3, 2018
 I came back to this project to try out a few things beyond the tree ensembles that were used, namely:
